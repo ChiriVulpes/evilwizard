@@ -1,0 +1,22 @@
+{
+    "compilerOptions": {
+        "declaration": true,
+        "module": "amd",
+        "pretty": true,
+        "sourceMap": true,
+        "target": "es2017",
+        "baseUrl": "./src",
+        "lib": [
+            "es2017",
+            "dom.iterable"
+        ],
+        "types": [],
+        
+        "strict": true,
+        "noUnusedLocals": true
+    },
+    "include": [
+        "src/**/*.ts"
+    ],
+    "version": "2.2.2"
+}

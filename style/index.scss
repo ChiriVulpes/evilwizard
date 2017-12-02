@@ -1,0 +1,30 @@
+@mixin user-select ($value) {
+	user-select: $value;
+	-webkit-user-select: $value;
+}
+
+body {
+	background: #000;
+	background-attachment: fixed
+}
+body, html, canvas {
+	display: block;
+	width: 100%;
+	height: 100%;
+	min-width: 1100px;
+	min-height: 800px;
+	margin: 0;
+	padding: 0;
+	top: 0;
+	left: 0;
+	@include user-select(none);
+	cursor: default;
+	position: fixed;
+	overflow: hidden;
+}
+
+canvas {
+	height: auto;
+	width: auto;
+}
+

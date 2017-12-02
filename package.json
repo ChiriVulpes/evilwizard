@@ -1,0 +1,29 @@
+{
+	"name": "evil-wizard",
+	"version": "1.0.0",
+	"dependencies": {},
+	"description": "Ludum Dare 40: The More You Have, the Worse It Is",
+	"license": "UNLICENSED",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/yuudaari/evil-wizard"
+	},
+	"devDependencies": {
+		"gulp": "3.9.1",
+		"gulp-plumber": "1.1.0",
+		"gulp-connect": "5.0.0",
+		"merge2": "1.2.0",
+		"run-sequence": "2.2.0",
+		"typescript": "2.6.1",
+		"gulp-typescript": "3.2.3",
+		"tslint-language-service": "0.9.6",
+		"tslint": "5.8.0",
+		"gulp-sass": "3.1.0",
+		"mocha": "4.0.1",
+		"gulp-mocha": "4.3.1",
+		"chai": "4.1.2",
+		"@types/request-promise": "4.1.39",
+		"@types/mocha": "2.2.44",
+		"@types/chai": "4.0.4"
+	}
+}
