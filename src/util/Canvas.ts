@@ -97,6 +97,12 @@ export class Canvas {
 		);
 	}
 
+	public isPositionVisible (x: number, y: number) {
+		const s = 16 * this.scale;
+		return x * s + s >= this.viewport.position.x && x * s < this.viewport.position.x + this.viewport.size.x &&
+			y * s + s >= this.viewport.position.y && y * s < this.viewport.position.y + this.viewport.size.y;
+	}
+
 	private getImagePosition (img: HTMLImageElement, tile: number, size: number): IVector {
 		return {
 			x: (tile % (img.width / size)) * size,

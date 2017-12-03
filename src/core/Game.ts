@@ -1,8 +1,9 @@
+import { Direction, IApi } from "core/Api";
 import { Controls } from "core/Controls";
 import { DungeonGenerator } from "core/DungeonGenerator";
 import { EntityType } from "core/Entities";
-import { Direction, Entity } from "core/Entity";
-import { Tile } from "core/Tiles";
+import { Entity } from "core/Entity";
+import { TileType } from "core/Tiles";
 import { World } from "core/World";
 import { EvilWizard } from "entities/EvilWizard";
 import { Mushroom } from "entities/Mushroom";
@@ -11,7 +12,10 @@ import * as Random from "util/Random";
 import { TimeManager } from "util/TimeManager";
 import { IVector, Vector } from "util/Vector";
 
-export class Game {
+export class Game implements IApi {
+	public entities: Entity[] = [];
+	public world: World;
+
 	private isRunning = false;
 	private _paused: boolean;
 	public get paused () {
@@ -21,16 +25,14 @@ export class Game {
 		this._paused = paused;
 	}
 
-	private entities: Entity[] = [];
 	private canvas = new Canvas("game");
 	private time = new TimeManager();
-	private world: World;
 	private dungeonGenerator = new DungeonGenerator();
 	private controls = new Controls();
 	private player: EvilWizard;
 
 	public async load () {
-		await this.canvas.loadImages(Tile, "tile", [Tile.None]);
+		await this.canvas.loadImages(TileType, "tile", [TileType.None]);
 		await this.canvas.loadImages(EntityType, "entity");
 	}
 
@@ -55,8 +57,8 @@ export class Game {
 	}
 
 	private addEntity (entity: Entity, position: IVector) {
+		entity.api = this;
 		entity.position = position;
-		entity.getEntities = () => this.entities;
 		this.entities.push(entity);
 	}
 

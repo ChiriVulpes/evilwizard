@@ -1,4 +1,4 @@
-import { Tile } from "core/Tiles";
+import { TileType } from "core/Tiles";
 import { Canvas, ISubTiles } from "util/Canvas";
 import { IVector, Vector } from "util/Vector";
 
@@ -13,14 +13,14 @@ enum TileAdjacent {
 	DownRight = 128,
 }
 
-const mappedTiles = [Tile.Grass, Tile.Path];
+const mappedTiles = [TileType.Grass, TileType.Path];
 
 export class World {
-	public tiles: Tile[];
+	public tiles: TileType[];
 	public mappings: number[];
 	public size: IVector;
 
-	constructor(size = Vector(32)) {
+	constructor(size = Vector(64)) {
 		this.size = size;
 		this.tiles = new Array(this.size.x * this.size.y);
 		this.mappings = new Array(this.size.x * this.size.y);
@@ -28,7 +28,7 @@ export class World {
 	}
 
 	public clear () {
-		this.tiles.fill(Tile.None);
+		this.tiles.fill(TileType.None);
 	}
 
 	public remap () {
@@ -44,12 +44,16 @@ export class World {
 	public render (canvas: Canvas) {
 		for (let y = 0; y < this.size.y; y++) {
 			for (let x = 0; x < this.size.x; x++) {
-				const tile = this.getTile(x, y);
-				if (tile == Tile.None) {
+				if (!canvas.isPositionVisible(x, y)) {
 					continue;
 				}
 
-				canvas.drawSubTiles(canvas.getImageName(Tile[tile], "tile"),
+				const tile = this.getTile(x, y);
+				if (tile == TileType.None) {
+					continue;
+				}
+
+				canvas.drawSubTiles(canvas.getImageName(TileType[tile], "tile"),
 					Vector(x, y),
 					this.getSubTiles(this.mappings[this.getTileLocation(x, y)]),
 				);
@@ -57,13 +61,13 @@ export class World {
 		}
 	}
 
-	public getTile (x: number, y: number): Tile;
-	public getTile (position: IVector): Tile;
-	public getTile (x: number | IVector, y?: number): Tile;
+	public getTile (x: number, y: number): TileType;
+	public getTile (position: IVector): TileType;
+	public getTile (x: number | IVector, y?: number): TileType;
 	public getTile (x: number | IVector, y?: number) {
 		return this.tiles[this.getTileLocation(x, y)];
 	}
-	public setTile (position: IVector, tile: Tile) {
+	public setTile (position: IVector, tile: TileType) {
 		this.tiles[this.getTileLocation(position)] = tile;
 	}
 

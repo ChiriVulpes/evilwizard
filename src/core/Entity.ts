@@ -1,4 +1,6 @@
+import { Direction, IApi } from "core/Api";
 import { EntityType } from "core/Entities";
+import { Tile } from "core/Tiles";
 import { Canvas } from "util/Canvas";
 import { GameObject } from "util/GameObject";
 import * as Random from "util/Random";
@@ -21,13 +23,6 @@ export enum EntityBaseAnimation {
 	Left,
 }
 
-export enum Direction {
-	Down,
-	Up,
-	Right,
-	Left,
-}
-
 export abstract class Entity<Animation extends number = EntityBaseAnimation> extends GameObject {
 	public type: EntityType;
 	public magic: number;
@@ -42,7 +37,7 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 	public movement?: Direction;
 	public canMoveChecked = false;
 
-	public getEntities: () => Entity[];
+	public api: IApi<Entity>;
 
 	public resetMovementQueue () {
 		this.movementQueue = [];
@@ -77,7 +72,13 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 	}
 
 	public canActuallyMove () {
-		for (const entity of this.getEntities()) {
+		const offsetPosition = this.getOffsetPosition();
+		const tile = this.api.world.getTile(offsetPosition);
+		if (!Tile.isWalkable(tile)) {
+			return false;
+		}
+
+		for (const entity of this.api.entities) {
 			if (entity === this) {
 				continue;
 			}
@@ -85,7 +86,6 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 			const entityOffsetPosition = entity.getOffsetPosition(
 				entity.movement === undefined ? entity.movementQueue[0] : entity.movement,
 			);
-			const offsetPosition = this.getOffsetPosition();
 			if (
 				(entityOffsetPosition.x == offsetPosition.x && entityOffsetPosition.y == offsetPosition.y) ||
 				(entity.position.x == offsetPosition.x && entity.position.y == offsetPosition.y)
@@ -123,12 +123,15 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 	public getNearest (type: EntityType, within = Infinity) {
 		let entityDistance = Infinity;
 		let nearest: Entity | undefined;
-		for (const entity of this.getEntities()) {
+		for (const entity of this.api.entities) {
 			if (entity.type != type) {
 				continue;
 			}
 
-			const dist = (entity.position.x - this.position.x + (entity.position.y - this.position.y)) / 2;
+			const dist = Math.avg(
+				Math.abs(entity.position.x - this.position.x),
+				Math.abs(entity.position.y - this.position.y),
+			);
 			if (dist < entityDistance && dist <= within) {
 				nearest = entity;
 				entityDistance = dist;

@@ -1,4 +1,5 @@
 import { Game } from "core/Game";
+import "util/Number";
 
 const game = new Game();
 game.load().then(() => {
