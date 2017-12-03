@@ -1,4 +1,22 @@
 <title>Loading...</title>
+
+<canvas id="game"></canvas>
+<guage id="health">
+	<guage level="Health"></guage>
+</guage>
+<guage id="magic">
+	<guage level="Level1"></guage>
+	<guage level="Level2"></guage>
+	<guage level="Level3"></guage>
+	<guage level="Level4"></guage>
+</guage>
+<div id="numbers"></div>
+<div id="abilities">
+	<slot ability="None"></slot>
+	<slot ability="None"></slot>
+	<slot ability="None"></slot>
+	<slot ability="None"></slot>
+</div>
+
 <link rel="stylesheet" href="out/style/index.css">
 <script data-main="./main.js" src="static/js/vendor/require.js"></script>
-<canvas id="game"></canvas>

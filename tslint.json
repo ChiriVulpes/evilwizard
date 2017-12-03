@@ -79,7 +79,7 @@
 		"return-undefined": true,
 		"semicolon": true,
 		"strict-type-predicates": true,
-		"switch-final-break": true,
+		"switch-final-break": [true, "always"],
 		"type-literal-delimiter": true,
 		"typeof-compare": true,
 		"use-default-type-parameter": true,

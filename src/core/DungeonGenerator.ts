@@ -1,16 +1,31 @@
 import { Direction } from "core/Api";
+import { EntityType } from "core/Entities";
+import { Entity } from "core/Entity";
 import { TileType } from "core/Tiles";
 import { World } from "core/World";
-import * as Random from "util/Random";
+import { Flower } from "entities/Flower";
+import { Mushroom } from "entities/Mushroom";
+import { Random } from "util/Random";
 import { IVector, Vector } from "util/Vector";
 
-export interface IRoom {
-	size: IVector;
-	position: IVector;
-	pathsTo?: IRoom[];
+export enum RoomType {
+	Mushrooms,
+	Flowers,
+	Nature,
 }
 
-function roomIntersects (a: IRoom, b: IRoom, padding = 0) {
+export interface IRoom extends IRoomLayout {
+	pathsTo?: IRoom[];
+	entities: Entity[];
+	type: RoomType;
+}
+
+export interface IRoomLayout {
+	size: IVector;
+	position: IVector;
+}
+
+function roomIntersects (a: IRoomLayout, b: IRoomLayout, padding = 0) {
 	return a.position.x + a.size.x + padding > b.position.x && a.position.x - padding < b.position.x + b.size.x &&
 		a.position.y + a.size.y + padding > b.position.y && a.position.y - padding < b.position.y + b.size.y;
 }
@@ -42,7 +57,7 @@ export class DungeonGenerator {
 
 	private generateRooms (count: number, minSize: number, maxSize: number) {
 		for (let i = 0; i < count; i++) {
-			let room: IRoom;
+			let room: IRoomLayout;
 			let tries = 0;
 			do {
 				room = this.generateRoom(minSize, maxSize);
@@ -212,15 +227,69 @@ export class DungeonGenerator {
 		return nearestRooms;
 	}
 
-	private addRoom (room: IRoom) {
+	private addRoom (roomLayout: IRoomLayout) {
+		const roomType = Random.enumMember<RoomType>(RoomType);
+		const room: IRoom = {
+			...roomLayout,
+			type: roomType,
+			entities: [],
+		};
 		this.rooms.push(room);
+
+		switch (roomType) {
+			case RoomType.Mushrooms:
+				this.spawnEntities(room, EntityType.Mushroom, Random.int(1, 5));
+				break;
+			case RoomType.Flowers:
+				this.spawnEntities(room, EntityType.Flower, Random.int(10, 15));
+				break;
+			case RoomType.Nature:
+				this.spawnEntities(room, EntityType.Mushroom, Random.int(1, 3));
+				this.spawnEntities(room, EntityType.Flower, Random.int(3, 7));
+				break;
+		}
+
 		for (let y = room.position.y; y < room.position.y + room.size.y; y++) {
 			for (let x = room.position.x; x < room.position.x + room.size.x; x++) {
 				this.world.setTile(Vector(x, y), TileType.Grass);
 			}
 		}
 	}
-	private roomIntersects (room: IRoom) {
+
+	private spawnEntities (room: IRoom, entityType: EntityType, count: number) {
+		const enemyCount = Random.int(1, 4);
+		for (let i = 0; i < enemyCount; i++) {
+			let position: IVector;
+			do {
+				position = Vector(room.position.x + Random.int(room.size.x), room.position.y + Random.int(room.size.y));
+			} while (this.entityAt(room.entities, position));
+
+			room.entities.push(this.spawnEntity(entityType, position));
+		}
+	}
+
+	private spawnEntity (entityType: EntityType, position: IVector) {
+		let entity: Entity;
+		switch (entityType) {
+			case EntityType.Mushroom: entity = new Mushroom(); break;
+			case EntityType.Flower: entity = new Flower(); break;
+		}
+
+		entity!.position = position;
+		return entity!;
+	}
+
+	private entityAt (entities: Entity[], position: IVector) {
+		for (const object of entities) {
+			if (object instanceof Entity && object.position.x == position.x && object.position.y == position.y) {
+				return object;
+			}
+		}
+
+		return undefined;
+	}
+
+	private roomIntersects (room: IRoomLayout) {
 		for (const existingRoom of this.rooms) {
 			if (roomIntersects(room, existingRoom, 1)) {
 				return true;
@@ -230,7 +299,7 @@ export class DungeonGenerator {
 		return false;
 	}
 
-	private generateRoom (min: number, max: number): IRoom {
+	private generateRoom (min: number, max: number): IRoomLayout {
 		const size = Vector(Random.int(min, max), Random.int(min, max));
 		const position = Vector(
 			Random.int(0, this.world.size.x - size.x),

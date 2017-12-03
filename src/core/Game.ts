@@ -1,20 +1,27 @@
-import { Direction, IApi } from "core/Api";
+import { DarkHand } from "abilities/DarkHand";
+import { Eraser } from "abilities/Eraser";
+import { Fireball } from "abilities/Fireball";
+import { Heal } from "abilities/Heal";
+import { Ability } from "core/Ability";
+import { Direction, IApi, MagicLevel, magicLevels } from "core/Api";
 import { Controls } from "core/Controls";
 import { DungeonGenerator } from "core/DungeonGenerator";
 import { EntityType } from "core/Entities";
-import { Entity } from "core/Entity";
+import { Entity, EntityState } from "core/Entity";
+import { Readout } from "core/Readout";
 import { TileType } from "core/Tiles";
 import { World } from "core/World";
 import { EvilWizard } from "entities/EvilWizard";
-import { Mushroom } from "entities/Mushroom";
 import { Canvas } from "util/Canvas";
-import * as Random from "util/Random";
 import { TimeManager } from "util/TimeManager";
 import { IVector, Vector } from "util/Vector";
 
 export class Game implements IApi {
 	public entities: Entity[] = [];
 	public world: World;
+	public canvas = new Canvas("game");
+	public readout = new Readout();
+	public player: EvilWizard;
 
 	private isRunning = false;
 	private _paused: boolean;
@@ -25,11 +32,11 @@ export class Game implements IApi {
 		this._paused = paused;
 	}
 
-	private canvas = new Canvas("game");
 	private time = new TimeManager();
 	private dungeonGenerator = new DungeonGenerator();
 	private controls = new Controls();
-	private player: EvilWizard;
+	private playerLevel: MagicLevel;
+	private abilities: Ability[];
 
 	public async load () {
 		await this.canvas.loadImages(TileType, "tile", [TileType.None]);
@@ -41,6 +48,8 @@ export class Game implements IApi {
 		this.isRunning = true;
 		this.world = new World();
 		this.newLevel();
+		this.playerLevel = MagicLevel.None;
+		this.abilities = [];
 		this.controls.start();
 
 		this.addEntity(this.player = new EvilWizard(), Vector(
@@ -56,9 +65,26 @@ export class Game implements IApi {
 		this.controls.stop();
 	}
 
+	public getCorpseAt (position: IVector): Entity | undefined {
+		for (const entity of this.entities) {
+			if (
+				entity.state == EntityState.Dead &&
+				entity.position.x == position.x && entity.position.y == position.y
+			) {
+				return entity;
+			}
+		}
+	}
+
+	public removeEntity (corpse: Entity) {
+		const index = this.entities.indexOf(corpse);
+		this.entities.splice(index, 1);
+	}
+
 	private addEntity (entity: Entity, position: IVector) {
 		entity.api = this;
 		entity.position = position;
+		entity.health = entity.maxHealth;
 		this.entities.push(entity);
 	}
 
@@ -75,8 +101,9 @@ export class Game implements IApi {
 		requestAnimationFrame(() => this.loop());
 	}
 
+	// tslint:disable-next-line cyclomatic-complexity
 	private update () {
-		if (this.time.canTick) {
+		if (this.time.canTick && this.player.state != EntityState.Dead) {
 			if (this.controls.isDown("KeyW")) {
 				this.player.move(Direction.Up);
 				this.time.nextTick();
@@ -95,11 +122,60 @@ export class Game implements IApi {
 
 			} else if (this.controls.isDown("Space")) {
 				this.time.nextTick();
+
+			} else if (this.controls.isDown("Digit1") || this.controls.isDown("Numpad1")) {
+				if (this.abilities[0] && this.abilities[0].use()) {
+					this.time.nextTick();
+				}
+
+			} else if (this.controls.isDown("Digit2") || this.controls.isDown("Numpad2")) {
+				if (this.abilities[1] && this.abilities[1].use()) {
+					this.time.nextTick();
+				}
+
+			} else if (this.controls.isDown("Digit3") || this.controls.isDown("Numpad3")) {
+				if (this.abilities[2] && this.abilities[2].use()) {
+					this.time.nextTick();
+				}
+
+			} else if (this.controls.isDown("Digit4") || this.controls.isDown("Numpad4")) {
+				if (this.abilities[3] && this.abilities[3].use()) {
+					this.time.nextTick();
+				}
+
 			}
 		}
 
-		for (const object of this.entities) {
+		for (const object of this.entities.slice().sort((a, b) =>
+			(a.state == EntityState.Dead ? -Infinity : a.position.y) - (b.state == EntityState.Dead ? -Infinity : b.position.y),
+		)) {
 			object.update(this.time);
+		}
+
+		this.readout.setMagic(this.player.magic);
+		this.readout.setHealth(this.player.health, this.player.maxHealth);
+		if (this.player.magic >= magicLevels[this.playerLevel + 1]) {
+			this.playerLevel++;
+			switch (this.playerLevel) {
+				case MagicLevel.Level1:
+					this.abilities[0] = new Heal();
+					this.abilities[0].api = this;
+					break;
+				case MagicLevel.Level2:
+					this.abilities[1] = new DarkHand();
+					this.abilities[1].api = this;
+					break;
+				case MagicLevel.Level3:
+					this.abilities[2] = new Fireball();
+					this.abilities[2].api = this;
+					break;
+				case MagicLevel.Level4:
+					this.abilities[3] = new Eraser();
+					this.abilities[3].api = this;
+					break;
+			}
+
+			this.readout.setAbilities(this.abilities);
 		}
 	}
 
@@ -115,30 +191,13 @@ export class Game implements IApi {
 
 	private newLevel () {
 		this.dungeonGenerator.generate(this.world);
-		this.spawnEnemies();
-	}
-
-	private spawnEnemies () {
 		for (const room of this.dungeonGenerator.rooms) {
-			const enemyCount = Random.int(1, 4);
-			for (let i = 0; i < enemyCount; i++) {
-				let position: IVector;
-				do {
-					position = Vector(room.position.x + Random.int(room.size.x), room.position.y + Random.int(room.size.y));
-				} while (this.entityAt(position));
-
-				this.addEntity(new Mushroom(), position);
-			}
-		}
-	}
-
-	private entityAt (position: IVector) {
-		for (const object of this.entities) {
-			if (object instanceof Entity && object.position.x == position.x && object.position.y == position.y) {
-				return object;
-			}
+			this.entities.push(...room.entities);
 		}
 
-		return undefined;
+		for (const entity of this.entities) {
+			entity.api = this;
+			entity.health = entity.maxHealth;
+		}
 	}
 }

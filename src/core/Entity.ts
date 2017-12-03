@@ -1,9 +1,10 @@
 import { Direction, IApi } from "core/Api";
 import { EntityType } from "core/Entities";
-import { Tile } from "core/Tiles";
+import { NumberType } from "core/Readout";
+import { Tile, TileType } from "core/Tiles";
 import { Canvas } from "util/Canvas";
 import { GameObject } from "util/GameObject";
-import * as Random from "util/Random";
+import { Random } from "util/Random";
 import { TimeManager } from "util/TimeManager";
 import { IVector, Vector } from "util/Vector";
 
@@ -14,6 +15,16 @@ export enum DamageType {
 	Dark,
 	Earth,
 	Water,
+}
+
+export enum Allegiance {
+	EvilWizard,
+	Nature,
+}
+
+export enum EntityState {
+	Alive,
+	Dead,
 }
 
 export enum EntityBaseAnimation {
@@ -29,13 +40,17 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 	public maxHealth: number;
 	public resistances: DamageType[] = [];
 	public weaknesses: DamageType[] = [];
+	public allegiance = Allegiance.Nature;
+	public damageType: DamageType[];
+	public damageAmount: number;
 
 	public health: number;
 	public position: IVector;
 	public animation: Animation = EntityBaseAnimation.Down as Animation;
 	public movementQueue: Direction[] = [];
 	public movement?: Direction;
-	public canMoveChecked = false;
+	public attack?: Direction;
+	public state = EntityState.Alive;
 
 	public api: IApi<Entity>;
 
@@ -71,15 +86,15 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 		this.move(Random.int(4));
 	}
 
-	public canActuallyMove () {
+	public getTileBlocker (): TileType | Entity | undefined {
 		const offsetPosition = this.getOffsetPosition();
 		const tile = this.api.world.getTile(offsetPosition);
 		if (!Tile.isWalkable(tile)) {
-			return false;
+			return tile;
 		}
 
 		for (const entity of this.api.entities) {
-			if (entity === this) {
+			if (entity === this || entity.state == EntityState.Dead) {
 				continue;
 			}
 
@@ -90,15 +105,13 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 				(entityOffsetPosition.x == offsetPosition.x && entityOffsetPosition.y == offsetPosition.y) ||
 				(entity.position.x == offsetPosition.x && entity.position.y == offsetPosition.y)
 			) {
-				return false;
+				return entity;
 			}
 		}
-
-		return true;
 	}
 
 	public fight (entity: Entity) {
-
+		entity.damage(this.damageType, this.damageAmount);
 	}
 
 	public damage (damageTypes: DamageType | DamageType[], amt: number) {
@@ -117,7 +130,21 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 			}
 		}
 
+		// crit success
+		if (Random.chance(0.1)) {
+			potency += 0.2;
+		}
+
+		// crit fail
+		if (Random.chance(0.1)) {
+			potency -= 0.2;
+		}
+
 		this.health -= amt * potency;
+		this.api.readout.showNumber(NumberType.Damage, -amt * potency, this.api.canvas.getScreenPosition(this.position));
+		if (this.health <= 0) {
+			this.state = EntityState.Dead;
+		}
 	}
 
 	public getNearest (type: EntityType, within = Infinity) {
@@ -142,10 +169,13 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 	}
 
 	public update (time: TimeManager) {
-		if (this.movement !== undefined) {
-			if (time.canTick || time.isNewTick) {
+		if (time.canTick || time.isNewTick) {
+			if (this.movement !== undefined) {
 				this.position = this.getOffsetPosition();
 				this.movement = undefined;
+
+			} else if (this.attack !== undefined) {
+				this.attack = undefined;
 			}
 		}
 
@@ -153,13 +183,23 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 			this.movement = this.movementQueue.shift();
 
 			if (this.movement !== undefined) {
-				if (!this.canActuallyMove()) {
+				const tileBlocker = this.getTileBlocker();
+				if (tileBlocker !== undefined) {
+					if (tileBlocker instanceof Entity && this.allegiance != tileBlocker.allegiance) {
+						this.attack = this.movement;
+						this.fight(tileBlocker);
+					}
+
 					this.resetMovement();
 				}
 			}
 
 			if (this.movement !== undefined) {
 				this.onStartMove(this.movement);
+			}
+
+			if (this.attack !== undefined) {
+				this.onStartAttack(this.attack);
 			}
 		}
 	}
@@ -169,9 +209,18 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 
 		canvas.drawFrame(imageName,
 			this.animation,
-			this.movement !== undefined ? 1 + Math.floor(time.tickPercent * 2) % 2 : 0,
-			this.getOffsetPosition(undefined, time.tickPercent),
+			this.state === EntityState.Dead ? 3 :
+				this.movement !== undefined ? 1 + Math.floor(time.tickPercent * 2) % 2 : 0,
+			this.getAnimationPosition(time.tickPercent),
 		);
+	}
+
+	public getAnimationPosition (percent = 1) {
+		if (this.movement === undefined) {
+			return this.getOffsetPosition(this.attack, (0.5 - Math.abs(percent - 0.5)) * 0.5);
+		}
+
+		return this.getOffsetPosition(undefined, percent);
 	}
 
 	public getOffsetPosition (movement = this.movement, percent = 1) {
@@ -194,6 +243,10 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 	}
 
 	public onStartMove (direction: Direction) {
+		this.animation = direction as any;
+	}
+
+	public onStartAttack (direction: Direction) {
 		this.animation = direction as any;
 	}
 }

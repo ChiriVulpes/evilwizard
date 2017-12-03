@@ -21,6 +21,7 @@ body, html, canvas {
 	cursor: default;
 	position: fixed;
 	overflow: hidden;
+	image-rendering: pixelated;
 }
 
 canvas {
@@ -28,3 +29,4 @@ canvas {
 	width: auto;
 }
 
+@import "./readout";

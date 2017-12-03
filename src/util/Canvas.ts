@@ -16,7 +16,7 @@ export class Canvas {
 	private canvasElement: HTMLCanvasElement;
 	private context: CanvasRenderingContext2D;
 	private images: { [key: string]: HTMLImageElement } = {};
-	private scale = 2;
+	private scale = 3;
 	private viewport: IViewport;
 
 	public set viewportPosition (position: IVector) {
@@ -101,6 +101,13 @@ export class Canvas {
 		const s = 16 * this.scale;
 		return x * s + s >= this.viewport.position.x && x * s < this.viewport.position.x + this.viewport.size.x &&
 			y * s + s >= this.viewport.position.y && y * s < this.viewport.position.y + this.viewport.size.y;
+	}
+
+	public getScreenPosition (position: IVector) {
+		return Vector(
+			position.x * 16 * this.scale - this.viewport.position.x,
+			position.y * 16 * this.scale - this.viewport.position.y,
+		);
 	}
 
 	private getImagePosition (img: HTMLImageElement, tile: number, size: number): IVector {
