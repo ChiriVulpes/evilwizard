@@ -65,7 +65,9 @@ export class World {
 	public getTile (position: IVector): TileType;
 	public getTile (x: number | IVector, y?: number): TileType;
 	public getTile (x: number | IVector, y?: number) {
-		return this.tiles[this.getTileLocation(x, y)];
+		const tileLocation = this.getTileLocation(x, y);
+		return tileLocation < 0 || tileLocation > this.tiles.length ?
+			TileType.None : this.tiles[tileLocation];
 	}
 	public setTile (position: IVector, tile: TileType) {
 		this.tiles[this.getTileLocation(position)] = tile;
@@ -161,6 +163,10 @@ export class World {
 		if (typeof x == "object") {
 			y = x.y;
 			x = x.x;
+		}
+
+		if (x > this.size.x || y! > this.size.y) {
+			return Infinity;
 		}
 
 		return y! * this.size.x + x;

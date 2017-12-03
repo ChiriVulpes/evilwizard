@@ -1,6 +1,6 @@
 import { EntityType } from "core/Entities";
-import { Allegiance, DamageType, Entity, EntityState } from "core/Entity";
-import { NumberType } from "core/Readout";
+import { Allegiance, DamageType, Entity, EntityState, IDamageResult } from "core/Entity";
+import { MessageType } from "core/Readout";
 import { Random } from "util/Random";
 import { TimeManager } from "util/TimeManager";
 
@@ -21,10 +21,17 @@ export class EvilWizard extends Entity {
 				const stolenMagic = Random(corpse.magic / 2, corpse.magic * 1.5);
 				this.magic += stolenMagic;
 				this.api.removeEntity(corpse);
-				this.api.readout.showNumber(NumberType.Magic, stolenMagic, this.api.canvas.getScreenPosition(this.position));
+				this.api.readout.showNumber(MessageType.Magic, stolenMagic, this.api.canvas.getScreenPosition(this.position));
+				this.api.readout.showMessage(MessageType.Magic,
+					`You collected ${stolenMagic.toFixed(1)} magic from ${this.api.readout.getName(corpse.type)}.`,
+				);
 			}
 		}
 
 		super.update(time);
+	}
+
+	public onShowFightResult (damageResult: IDamageResult) {
+		this.api.readout.showDamageResult(damageResult, MessageType.Fight);
 	}
 }

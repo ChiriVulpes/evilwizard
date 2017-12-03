@@ -9,7 +9,7 @@ import { DungeonGenerator } from "core/DungeonGenerator";
 import { EntityType } from "core/Entities";
 import { Entity, EntityState } from "core/Entity";
 import { Readout } from "core/Readout";
-import { TileType } from "core/Tiles";
+import { Tile, TileType } from "core/Tiles";
 import { World } from "core/World";
 import { EvilWizard } from "entities/EvilWizard";
 import { Canvas } from "util/Canvas";
@@ -65,6 +65,29 @@ export class Game implements IApi {
 		this.controls.stop();
 	}
 
+	public getTileBlocker (position: IVector, exclude?: Entity[]): TileType | Entity | undefined {
+		const tile = this.world.getTile(position);
+		if (!Tile.isWalkable(tile)) {
+			return tile;
+		}
+
+		for (const entity of this.entities) {
+			if (entity.state == EntityState.Dead || (exclude && exclude.includes(entity))) {
+				continue;
+			}
+
+			const entityOffsetPosition = entity.getOffsetPosition(
+				entity.movement === undefined ? entity.movementQueue[0] : entity.movement,
+			);
+			if (
+				(entityOffsetPosition.x == position.x && entityOffsetPosition.y == position.y) ||
+				(entity.position.x == position.x && entity.position.y == position.y)
+			) {
+				return entity;
+			}
+		}
+	}
+
 	public getCorpseAt (position: IVector): Entity | undefined {
 		for (const entity of this.entities) {
 			if (
@@ -76,16 +99,33 @@ export class Game implements IApi {
 		}
 	}
 
-	public removeEntity (corpse: Entity) {
-		const index = this.entities.indexOf(corpse);
-		this.entities.splice(index, 1);
+	public getEntityAt (position: IVector, exclude?: Entity[], offsetPosition = false): Entity | undefined {
+		for (const entity of this.entities) {
+			if (exclude && exclude.includes(entity)) {
+				continue;
+			}
+
+			let entityPosition = entity.position;
+			if (offsetPosition) {
+				entityPosition = entity.getOffsetPosition();
+			}
+
+			if (entityPosition.x == position.x && entityPosition.y == position.y) {
+				return entity;
+			}
+		}
 	}
 
-	private addEntity (entity: Entity, position: IVector) {
+	public addEntity (entity: Entity, position: IVector) {
 		entity.api = this;
 		entity.position = position;
 		entity.health = entity.maxHealth;
 		this.entities.push(entity);
+	}
+
+	public removeEntity (corpse: Entity) {
+		const index = this.entities.indexOf(corpse);
+		this.entities.splice(index, 1);
 	}
 
 	private loop () {
@@ -158,15 +198,15 @@ export class Game implements IApi {
 			this.playerLevel++;
 			switch (this.playerLevel) {
 				case MagicLevel.Level1:
-					this.abilities[0] = new Heal();
+					this.abilities[0] = new Fireball();
 					this.abilities[0].api = this;
 					break;
 				case MagicLevel.Level2:
-					this.abilities[1] = new DarkHand();
+					this.abilities[1] = new Heal();
 					this.abilities[1].api = this;
 					break;
 				case MagicLevel.Level3:
-					this.abilities[2] = new Fireball();
+					this.abilities[2] = new DarkHand();
 					this.abilities[2].api = this;
 					break;
 				case MagicLevel.Level4:

@@ -1,4 +1,5 @@
 import { Readout } from "core/Readout";
+import { TileType } from "core/Tiles";
 import { World } from "core/World";
 import { Canvas } from "util/Canvas";
 import { GameObject } from "util/GameObject";
@@ -11,7 +12,10 @@ export interface IApi<Entity = GameObject, Player = GameObject> {
 	canvas: Canvas;
 	player: Player;
 	getCorpseAt (position: IVector): Entity | undefined;
+	getEntityAt (position: IVector, exclude?: Entity[], offsetPosition?: boolean): Entity | undefined;
+	addEntity (entity: Entity, position: IVector): void;
 	removeEntity (corpse: Entity): void;
+	getTileBlocker (position: IVector, exclude?: Entity[]): Entity | TileType | undefined;
 }
 
 export enum Direction {

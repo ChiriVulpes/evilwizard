@@ -1,11 +1,43 @@
 import { Ability, AbilityType } from "core/Ability";
 import { MagicLevel, magicLevels } from "core/Api";
+import { EntityType } from "core/Entities";
+import { CritType, IDamageResult } from "core/Entity";
 import { IVector } from "util/Vector";
 
-export enum NumberType {
+export enum MessageType {
 	Damage,
 	Magic,
 	Heal,
+	Fight,
+}
+
+function getLetterPosition (letter: string): IVector | undefined {
+	if (letter == " ") {
+		return undefined;
+	}
+
+	let index: number;
+	if (isNaN(+letter)) {
+		switch (letter) {
+			case "+": index = 36; break;
+			case "-": index = 37; break;
+			case ".": index = 38; break;
+			case "!": index = 39; break;
+			default: index = 10 + letter.toLowerCase().charCodeAt(0) - 97; break;
+		}
+
+	} else {
+		index = +letter;
+	}
+
+	return {
+		x: index % 10,
+		y: Math.floor(index / 10),
+	};
+}
+
+function capitalize (text: string) {
+	return text[0].toUpperCase() + text.slice(1);
 }
 
 export class Readout {
@@ -39,15 +71,104 @@ export class Readout {
 		}
 	}
 
-	public showNumber (type: NumberType, amt: number, position: IVector) {
-		const el = document.createElement("div");
-		el.classList.add("number", NumberType[type].toLowerCase());
-		el.style.top = `${position.y}px`;
-		el.style.left = `${position.x}px`;
-		el.textContent = `${amt > 0 ? "+" : ""}${amt.toFixed(1)}`;
-		document.getElementById("numbers")!.appendChild(el);
+	public showNumber (type: MessageType, amt: number, position: IVector) {
+		const text = this.getText(type, `${amt > 0 ? "+" : ""}${amt.toFixed(1)}`);
+		text.classList.add("slide", "color");
+		text.style.top = `${position.y}px`;
+		text.style.left = `${position.x}px`;
+		document.getElementById("numbers")!.appendChild(text);
 		setTimeout(() => {
-			el.remove();
+			text.remove();
 		}, 2000);
+	}
+
+	public showMessage (type: MessageType, text: string) {
+		const el = this.getText(type, text);
+		const messages = document.getElementById("messages")!;
+		messages.appendChild(el);
+		if (messages.children.length > 3) {
+			messages.firstElementChild!.remove();
+		}
+	}
+
+	public showDamageResult (damageResult: IDamageResult, type = MessageType.Damage) {
+		const sourceName = this.getName(damageResult.source, true);
+		const targetName = this.getName(damageResult.target);
+		const sentences = [`${sourceName} hit ${targetName} for ${damageResult.amt.toFixed(1)}`];
+
+		let and: boolean | undefined;
+		if (damageResult.effectiveness != 0) {
+			if (damageResult.effectiveness > 0) {
+				sentences.push("was effective");
+				and = true;
+
+			} else {
+				sentences.push("was not effective");
+				and = false;
+			}
+		}
+
+		switch (damageResult.crit) {
+			case CritType.Fail:
+				sentences.push("was a critical failure!");
+				and = !and;
+
+				break;
+			case CritType.Success:
+				sentences.push("was a critical success!");
+
+				break;
+		}
+
+		switch (sentences.length) {
+			case 1:
+				this.showMessage(type, `${sentences[0]}.`);
+				return;
+			case 2:
+				this.showMessage(type, `${sentences[0]}. It ${sentences[1]}${sentences[1].endsWith("!") ? "" : "."}`);
+				return;
+			case 3:
+				this.showMessage(type,
+					`${sentences[0]}. It ${sentences[1]} ${and ? "and" : "but"} it ${sentences[2]}`,
+				);
+				return;
+		}
+	}
+
+	public getName (entityType: EntityType, shouldCapitalize = false): string {
+		if (shouldCapitalize) {
+			return capitalize(this.getName(entityType));
+		}
+
+		switch (entityType) {
+			case EntityType.EvilWizard: return "you";
+			default: return `a ${EntityType[entityType]}`;
+		}
+	}
+
+
+	private getText (type: MessageType, text: string) {
+		const result = document.createElement("div");
+		result.classList.add("text", MessageType[type].toLowerCase());
+		for (const letter of text) {
+			const l = document.createElement("div");
+			l.classList.add("letter");
+			if (letter.toLowerCase() == "i" || letter == "1") {
+				l.classList.add("i");
+			}
+
+			const position = getLetterPosition(letter);
+			if (position) {
+				l.style.setProperty("--tilex", `${position.x}`);
+				l.style.setProperty("--tiley", `${position.y}`);
+
+			} else {
+				l.classList.add("space");
+			}
+
+			result.appendChild(l);
+		}
+
+		return result;
 	}
 }

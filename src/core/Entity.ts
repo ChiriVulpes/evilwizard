@@ -1,12 +1,26 @@
 import { Direction, IApi } from "core/Api";
 import { EntityType } from "core/Entities";
-import { NumberType } from "core/Readout";
-import { Tile, TileType } from "core/Tiles";
+import { MessageType } from "core/Readout";
+import { TileType } from "core/Tiles";
 import { Canvas } from "util/Canvas";
 import { GameObject } from "util/GameObject";
 import { Random } from "util/Random";
 import { TimeManager } from "util/TimeManager";
 import { IVector, Vector } from "util/Vector";
+
+export interface IDamageResult {
+	source: EntityType;
+	target: EntityType;
+	amt: number;
+	effectiveness: number;
+	crit: CritType;
+}
+
+export enum CritType {
+	None,
+	Fail,
+	Success,
+}
 
 export enum DamageType {
 	Physical,
@@ -43,13 +57,15 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 	public allegiance = Allegiance.Nature;
 	public damageType: DamageType[];
 	public damageAmount: number;
+	public showDamage = true;
 
 	public health: number;
 	public position: IVector;
 	public animation: Animation = EntityBaseAnimation.Down as Animation;
-	public movementQueue: Direction[] = [];
+	public movementQueue: Array<Direction | undefined> = [];
 	public movement?: Direction;
 	public attack?: Direction;
+	public direction = Direction.Down;
 	public state = EntityState.Alive;
 
 	public api: IApi<Entity>;
@@ -61,6 +77,10 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 	public resetMovement () {
 		this.movement = undefined;
 		this.movementQueue = [];
+	}
+
+	public getBlocker (position: IVector): Entity | TileType | undefined {
+		return this.api.getTileBlocker(position, [this]);
 	}
 
 	public move (direction: Direction) {
@@ -86,65 +106,60 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 		this.move(Random.int(4));
 	}
 
-	public getTileBlocker (): TileType | Entity | undefined {
-		const offsetPosition = this.getOffsetPosition();
-		const tile = this.api.world.getTile(offsetPosition);
-		if (!Tile.isWalkable(tile)) {
-			return tile;
-		}
-
-		for (const entity of this.api.entities) {
-			if (entity === this || entity.state == EntityState.Dead) {
-				continue;
-			}
-
-			const entityOffsetPosition = entity.getOffsetPosition(
-				entity.movement === undefined ? entity.movementQueue[0] : entity.movement,
-			);
-			if (
-				(entityOffsetPosition.x == offsetPosition.x && entityOffsetPosition.y == offsetPosition.y) ||
-				(entity.position.x == offsetPosition.x && entity.position.y == offsetPosition.y)
-			) {
-				return entity;
-			}
-		}
+	public fight (entity: Entity): IDamageResult {
+		return {
+			...entity.damage(this.damageType, this.damageAmount),
+			source: this.type,
+		} as IDamageResult;
 	}
 
-	public fight (entity: Entity) {
-		entity.damage(this.damageType, this.damageAmount);
-	}
-
-	public damage (damageTypes: DamageType | DamageType[], amt: number) {
+	public damage (damageTypes: DamageType | DamageType[], amt: number): Partial<IDamageResult> {
 		if (!Array.isArray(damageTypes)) {
 			damageTypes = [damageTypes];
 		}
 
-		let potency = 0.5;
-
+		let effectiveness = 0;
 		for (const damageType of damageTypes) {
 			if (this.weaknesses.includes(damageType)) {
-				potency += 0.1;
+				effectiveness += 0.1;
 
 			} else if (this.resistances.includes(damageType)) {
-				potency -= 0.1;
+				effectiveness -= 0.1;
 			}
 		}
+
+		let potency = 0.5 + effectiveness;
+
+		let crit = CritType.None;
 
 		// crit success
 		if (Random.chance(0.1)) {
 			potency += 0.2;
+			crit = CritType.Success;
 		}
 
 		// crit fail
 		if (Random.chance(0.1)) {
 			potency -= 0.2;
+			crit = CritType.Fail;
 		}
 
-		this.health -= amt * potency;
-		this.api.readout.showNumber(NumberType.Damage, -amt * potency, this.api.canvas.getScreenPosition(this.position));
-		if (this.health <= 0) {
-			this.state = EntityState.Dead;
+		amt *= potency;
+		this.health -= amt;
+		if (this.showDamage) {
+			this.api.readout.showNumber(MessageType.Damage, -amt, this.api.canvas.getScreenPosition(this.position));
 		}
+
+		if (this.health <= 0) {
+			this.onDestroy();
+		}
+
+		return {
+			target: this.type,
+			amt,
+			effectiveness,
+			crit,
+		};
 	}
 
 	public getNearest (type: EntityType, within = Infinity) {
@@ -180,17 +195,18 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 		}
 
 		if (time.isNewTick) {
-			this.movement = this.movementQueue.shift();
+			if (this.movementQueue.length > 0) {
+				this.movement = this.movementQueue.shift();
+
+			} else {
+				this.movement = this.onNoMovementQueued();
+			}
 
 			if (this.movement !== undefined) {
-				const tileBlocker = this.getTileBlocker();
+				this.direction = this.movement;
+				const tileBlocker = this.getBlocker(this.getOffsetPosition());
 				if (tileBlocker !== undefined) {
-					if (tileBlocker instanceof Entity && this.allegiance != tileBlocker.allegiance) {
-						this.attack = this.movement;
-						this.fight(tileBlocker);
-					}
-
-					this.resetMovement();
+					this.onBlocked(tileBlocker);
 				}
 			}
 
@@ -209,8 +225,7 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 
 		canvas.drawFrame(imageName,
 			this.animation,
-			this.state === EntityState.Dead ? 3 :
-				this.movement !== undefined ? 1 + Math.floor(time.tickPercent * 2) % 2 : 0,
+			this.getAnimationFrame(time),
 			this.getAnimationPosition(time.tickPercent),
 		);
 	}
@@ -242,11 +257,38 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 		return result;
 	}
 
+	public getAnimationFrame (time: TimeManager) {
+		return this.state === EntityState.Dead ? 3 :
+			this.movement !== undefined ? 1 + Math.floor(time.tickPercent * 2) % 2 : 0;
+	}
+
 	public onStartMove (direction: Direction) {
 		this.animation = direction as any;
 	}
 
 	public onStartAttack (direction: Direction) {
 		this.animation = direction as any;
+	}
+
+	public onDestroy () {
+		this.state = EntityState.Dead;
+	}
+
+	public onBlocked (tileBlocker: Entity | TileType) {
+		if (tileBlocker instanceof Entity && this.allegiance != tileBlocker.allegiance) {
+			this.attack = this.movement;
+			const damageResult = this.fight(tileBlocker);
+			this.onShowFightResult(damageResult);
+		}
+
+		this.resetMovement();
+	}
+
+	public onShowFightResult (damageResult: IDamageResult) {
+		this.api.readout.showDamageResult(damageResult);
+	}
+
+	public onNoMovementQueued (): Direction | undefined {
+		return;
 	}
 }

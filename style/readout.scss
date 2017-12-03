@@ -31,40 +31,85 @@ guage {
 	}
 }
 guage[level="Health"] {
-	background-position-x: -48px * 3;
+	background-position-x: -48px;
 }
 
-.number {
-	animation: number 1s linear forwards;
+.text {
+	--size: 3;
+	width: auto;
+	min-height: calc(8px * var(--size));
+	background: rgba(0, 0, 0, .5);
+    margin: 4px;
+	padding: 2px;
+	position: relative;
+	
+	.letter {
+		display: inline-block;
+		&:not(:first-child) {
+			margin-left: calc(-2px * var(--size));
+		}
+		&.i {
+			margin-right: calc(-3px * var(--size));
+		}
+		width: calc(8px * var(--size));
+		height: calc(8px * var(--size));
+			background-image: url("../../static/img/readout/fontcolor.png");
+		background-size: calc(80px * var(--size)) calc(32px * var(--size));
+		background-repeat: no-repeat;
+		--tilex: 0;
+		--tiley: 0;
+		background-position: calc(-8px * var(--tilex) * var(--size)) calc(-8px * var(--tiley) * var(--size));
+		
+		&.space {
+			background: none;
+			margin-left: calc(-4px * var(--size));
+		}
+	}
+	
+	&.colorless {
+		.letter {
+			background-image: url("../../static/img/readout/font.png");
+		}
+	}
+	&.heal {
+		filter: hue-rotate(200deg);
+	}
+	&.damage {
+		filter: hue-rotate(130deg);
+	}
+	&.fight {
+		filter: hue-rotate(180deg);
+	}
+	
+	&.slide {
+		position: fixed;
+		animation: slide 1s linear forwards;
+		background: none;
+	}
+}
+
+#messages {
 	position: fixed;
-	color: white;
-	font-size: 24pt;
-}
-.number.damage {
-	color: red;
-}
-.number.magic {
-	color: cyan;
-}
-.number.heal {
-	color: yellow;
+    top: 10px;
+    left: 50px;
+    right: 50px;
 }
 
-@keyframes number {
+@keyframes slide {
 	0% {
 		margin-top: 0;
 		opacity: 0;
 	}
 	30% {
-		margin-top: -10px;
+		margin-top: -40px;
 		opacity: 1;
 	}
 	70% {
-		margin-top: -30px;
+		margin-top: -100px;
 		opacity: 1;
 	}
 	100% {
-		margin-top: -50px;
+		margin-top: -170px;
 		opacity: 0;
 	}
 }

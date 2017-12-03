@@ -257,7 +257,7 @@ export class DungeonGenerator {
 	}
 
 	private spawnEntities (room: IRoom, entityType: EntityType, count: number) {
-		const enemyCount = Random.int(1, 4);
+		const enemyCount = count;
 		for (let i = 0; i < enemyCount; i++) {
 			let position: IVector;
 			do {
