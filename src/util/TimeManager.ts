@@ -1,5 +1,6 @@
 export class TimeManager {
 	public tickLength = 10;
+	public timeout: number;
 	private _isNewTick: boolean;
 	private tickTime: number;
 	private _realTime: number;
@@ -15,7 +16,7 @@ export class TimeManager {
 		return this._tick;
 	}
 	public get canTick () {
-		return this.tickTime == 0;
+		return this.tickTime == 0 && !this.timeout;
 	}
 	public get tickPercent () {
 		return 1 - this.tickTime / this.tickLength;
@@ -35,6 +36,9 @@ export class TimeManager {
 		if (this.tickTime) {
 			this.tickTime--;
 			this._isNewTick = false;
+
+		} else if (this.timeout) {
+			this.timeout--;
 		}
 	}
 }

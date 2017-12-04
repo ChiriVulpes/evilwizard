@@ -1,5 +1,6 @@
 import { EntityType } from "core/Entities";
 import { DamageType, Entity, EntityState } from "core/Entity";
+import { SoundType } from "core/Sound";
 import { Random } from "util/Random";
 import { TimeManager } from "util/TimeManager";
 
@@ -10,7 +11,8 @@ export class Flower extends Entity {
 	public resistances = [DamageType.Earth, DamageType.Light, DamageType.Water];
 	public weaknesses = [DamageType.Fire, DamageType.Dark, DamageType.Physical];
 	public damageType = [DamageType.Physical];
-	public damageAmount = 1;
+	public damageAmount = 1.5;
+	public stepSound = SoundType.FlowerStep;
 
 	public update (time: TimeManager) {
 		if (this.state != EntityState.Dead) {

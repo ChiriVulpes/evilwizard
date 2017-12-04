@@ -1,6 +1,7 @@
 import { Direction, IApi } from "core/Api";
 import { EntityType } from "core/Entities";
 import { MessageType } from "core/Readout";
+import { SoundType } from "core/Sound";
 import { TileType } from "core/Tiles";
 import { Canvas } from "util/Canvas";
 import { GameObject } from "util/GameObject";
@@ -58,6 +59,7 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 	public damageType: DamageType[];
 	public damageAmount: number;
 	public showDamage = true;
+	public stepSound: SoundType;
 
 	public health: number;
 	public position: IVector;
@@ -68,7 +70,7 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 	public direction = Direction.Down;
 	public state = EntityState.Alive;
 
-	public api: IApi<Entity>;
+	public api: IApi<Entity, Entity>;
 
 	public resetMovementQueue () {
 		this.movementQueue = [];
@@ -83,8 +85,13 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 		return this.api.getTileBlocker(position, [this]);
 	}
 
-	public move (direction: Direction) {
-		this.movementQueue = [direction];
+	public move (direction: Direction, current = false) {
+		if (current) {
+			this.movement = direction;
+
+		} else {
+			this.movementQueue = [direction];
+		}
 	}
 
 	public moveTowards (entity: Entity) {
@@ -102,8 +109,8 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 		this.move(direction);
 	}
 
-	public wander () {
-		this.move(Random.int(4));
+	public wander (current = false) {
+		this.move(Random.int(4), current);
 	}
 
 	public fight (entity: Entity): IDamageResult {
@@ -145,14 +152,7 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 		}
 
 		amt *= potency;
-		this.health -= amt;
-		if (this.showDamage) {
-			this.api.readout.showNumber(MessageType.Damage, -amt, this.api.canvas.getScreenPosition(this.position));
-		}
-
-		if (this.health <= 0) {
-			this.onDestroy();
-		}
+		amt = this.onDamage(amt);
 
 		return {
 			target: this.type,
@@ -183,6 +183,13 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 		return nearest;
 	}
 
+	public distanceTo (entity: Entity) {
+		return Math.avg(
+			Math.abs(entity.position.x - this.position.x),
+			Math.abs(entity.position.y - this.position.y),
+		);
+	}
+
 	public update (time: TimeManager) {
 		if (time.canTick || time.isNewTick) {
 			if (this.movement !== undefined) {
@@ -202,16 +209,21 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 				this.movement = this.onNoMovementQueued();
 			}
 
-			if (this.movement !== undefined) {
+			let tries = 0;
+			while (this.movement !== undefined && tries < 3) {
+				tries++;
 				this.direction = this.movement;
 				const tileBlocker = this.getBlocker(this.getOffsetPosition());
 				if (tileBlocker !== undefined) {
-					this.onBlocked(tileBlocker);
+					this.onBlocked(tileBlocker, tries == 3);
 				}
 			}
 
 			if (this.movement !== undefined) {
 				this.onStartMove(this.movement);
+				if (this.stepSound !== undefined && Random.chance(0.1) && this.distanceTo(this.api.player) < 10) {
+					this.api.sounds.play(this.stepSound);
+				}
 			}
 
 			if (this.attack !== undefined) {
@@ -257,6 +269,18 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 		return result;
 	}
 
+	public blocksTile (tile: IVector) {
+		let movement = this.movement;
+		if (movement === undefined) {
+			movement = this.movementQueue[0];
+		}
+
+		const position = this.getOffsetPosition(movement);
+
+		return (position.x == tile.x && position.y == tile.y) ||
+			(this.position.x == tile.x && this.position.y == tile.y);
+	}
+
 	public getAnimationFrame (time: TimeManager) {
 		return this.state === EntityState.Dead ? 3 :
 			this.movement !== undefined ? 1 + Math.floor(time.tickPercent * 2) % 2 : 0;
@@ -274,11 +298,13 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 		this.state = EntityState.Dead;
 	}
 
-	public onBlocked (tileBlocker: Entity | TileType) {
+	public onBlocked (tileBlocker: Entity | TileType, force = false) {
 		if (tileBlocker instanceof Entity && this.allegiance != tileBlocker.allegiance) {
 			this.attack = this.movement;
 			const damageResult = this.fight(tileBlocker);
-			this.onShowFightResult(damageResult);
+			if (tileBlocker.showDamage) {
+				this.onShowFightResult(damageResult);
+			}
 		}
 
 		this.resetMovement();
@@ -290,5 +316,19 @@ export abstract class Entity<Animation extends number = EntityBaseAnimation> ext
 
 	public onNoMovementQueued (): Direction | undefined {
 		return;
+	}
+
+	public onDamage (amt: number) {
+		this.health -= amt;
+
+		if (this.showDamage) {
+			this.api.readout.showNumber(MessageType.Damage, -amt, this.api.canvas.getScreenPosition(this.position));
+		}
+
+		if (this.health <= 0) {
+			this.onDestroy();
+		}
+
+		return amt;
 	}
 }

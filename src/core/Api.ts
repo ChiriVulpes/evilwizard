@@ -1,4 +1,5 @@
 import { Readout } from "core/Readout";
+import { Sound } from "core/Sound";
 import { TileType } from "core/Tiles";
 import { World } from "core/World";
 import { Canvas } from "util/Canvas";
@@ -11,6 +12,9 @@ export interface IApi<Entity = GameObject, Player = GameObject> {
 	readout: Readout;
 	canvas: Canvas;
 	player: Player;
+	playerLevel: number;
+	sounds: Sound;
+	reset (): void;
 	getCorpseAt (position: IVector): Entity | undefined;
 	getEntityAt (position: IVector, exclude?: Entity[], offsetPosition?: boolean): Entity | undefined;
 	addEntity (entity: Entity, position: IVector): void;
@@ -34,8 +38,8 @@ export enum MagicLevel {
 }
 
 export const magicLevels: { [key: number]: number } = {
-	[MagicLevel.Level1]: 20,
-	[MagicLevel.Level2]: 50,
-	[MagicLevel.Level3]: 100,
+	[MagicLevel.Level1]: 25,
+	[MagicLevel.Level2]: 75,
+	[MagicLevel.Level3]: 200,
 	[MagicLevel.Level4]: 500,
 };

@@ -4,6 +4,7 @@ import { Entity } from "core/Entity";
 import { TileType } from "core/Tiles";
 import { World } from "core/World";
 import { Flower } from "entities/Flower";
+import { Frog } from "entities/Frog";
 import { Mushroom } from "entities/Mushroom";
 import { Random } from "util/Random";
 import { IVector, Vector } from "util/Vector";
@@ -12,6 +13,8 @@ export enum RoomType {
 	Mushrooms,
 	Flowers,
 	Nature,
+	Frog,
+	Swampy,
 }
 
 export interface IRoom extends IRoomLayout {
@@ -238,13 +241,21 @@ export class DungeonGenerator {
 
 		switch (roomType) {
 			case RoomType.Mushrooms:
-				this.spawnEntities(room, EntityType.Mushroom, Random.int(1, 5));
+				this.spawnEntities(room, EntityType.Mushroom, Random.int(1, 6));
 				break;
 			case RoomType.Flowers:
 				this.spawnEntities(room, EntityType.Flower, Random.int(10, 15));
 				break;
+			case RoomType.Frog:
+				this.spawnEntities(room, EntityType.Frog, Random.int(1, 5));
+				break;
+			case RoomType.Swampy:
+				this.spawnEntities(room, EntityType.Frog, Random.int(1, 4));
+				this.spawnEntities(room, EntityType.Mushroom, Random.int(1, 4));
+				break;
 			case RoomType.Nature:
-				this.spawnEntities(room, EntityType.Mushroom, Random.int(1, 3));
+				this.spawnEntities(room, EntityType.Mushroom, Random.int(1, 4));
+				this.spawnEntities(room, EntityType.Frog, Random.int(1, 3));
 				this.spawnEntities(room, EntityType.Flower, Random.int(3, 7));
 				break;
 		}
@@ -273,6 +284,7 @@ export class DungeonGenerator {
 		switch (entityType) {
 			case EntityType.Mushroom: entity = new Mushroom(); break;
 			case EntityType.Flower: entity = new Flower(); break;
+			case EntityType.Frog: entity = new Frog(); break;
 		}
 
 		entity!.position = position;

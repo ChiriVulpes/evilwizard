@@ -1,5 +1,5 @@
 import { EntityType } from "core/Entities";
-import { DamageType, Entity, EntityState } from "core/Entity";
+import { Allegiance, DamageType, Entity, EntityState } from "core/Entity";
 import { MessageType } from "core/Readout";
 import { TileType } from "core/Tiles";
 import { TimeManager } from "util/TimeManager";
@@ -10,6 +10,7 @@ export class Fireball extends Entity {
 	public damageType = [DamageType.Fire];
 	public damageAmount = 2;
 	public maxHealth = 20;
+	public allegiance = Allegiance.EvilWizard;
 
 	public showDamage = false;
 

@@ -9,6 +9,8 @@ export enum MessageType {
 	Magic,
 	Heal,
 	Fight,
+	Good,
+	Bad,
 }
 
 function getLetterPosition (letter: string): IVector | undefined {
@@ -41,6 +43,17 @@ function capitalize (text: string) {
 }
 
 export class Readout {
+	private messagesEnabled: boolean;
+
+	public reset () {
+		this.setMagic(0);
+		this.setHealth(1, 1);
+		this.setAbilities([]);
+		const messages = document.getElementById("messages")!;
+		messages.innerHTML = "";
+		this.messagesEnabled = true;
+	}
+
 	public setMagic (amt: number) {
 		let lastAmount = 0;
 		for (const l in magicLevels) {
@@ -65,9 +78,14 @@ export class Readout {
 
 	public setAbilities (abilities: Ability[]) {
 		const abilitiesElement = document.getElementById("abilities")!;
-		for (let i = 0; i < 4 && abilities[i]; i++) {
+		for (let i = 0; i < 4; i++) {
 			const slot = abilitiesElement.children[i];
-			slot.setAttribute("ability", AbilityType[abilities[i].type]);
+			if (abilities[i]) {
+				slot.setAttribute("ability", AbilityType[abilities[i].type]);
+
+			} else {
+				slot.removeAttribute("ability");
+			}
 		}
 	}
 
@@ -83,12 +101,18 @@ export class Readout {
 	}
 
 	public showMessage (type: MessageType, text: string) {
-		const el = this.getText(type, text);
-		const messages = document.getElementById("messages")!;
-		messages.appendChild(el);
-		if (messages.children.length > 3) {
-			messages.firstElementChild!.remove();
+		if (this.messagesEnabled) {
+			const el = this.getText(type, text);
+			const messages = document.getElementById("messages")!;
+			messages.appendChild(el);
+			if (messages.children.length > 5) {
+				messages.firstElementChild!.remove();
+			}
 		}
+	}
+
+	public disableMessages () {
+		this.messagesEnabled = false;
 	}
 
 	public showDamageResult (damageResult: IDamageResult, type = MessageType.Damage) {
@@ -148,6 +172,7 @@ export class Readout {
 
 
 	private getText (type: MessageType, text: string) {
+		text = text.replace(/\s+/g, " ").trim();
 		const result = document.createElement("div");
 		result.classList.add("text", MessageType[type].toLowerCase());
 		for (const letter of text) {

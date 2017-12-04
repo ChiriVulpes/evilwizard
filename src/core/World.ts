@@ -73,6 +73,19 @@ export class World {
 		this.tiles[this.getTileLocation(position)] = tile;
 	}
 
+	public getTileLocation (x: number | IVector, y?: number) {
+		if (typeof x == "object") {
+			y = x.y;
+			x = x.x;
+		}
+
+		if (x > this.size.x || y! > this.size.y) {
+			return Infinity;
+		}
+
+		return y! * this.size.x + x;
+	}
+
 	private getSubTiles (mapping: number): ISubTiles {
 		return {
 			upLeft: this.getUpLeft(mapping),
@@ -157,18 +170,5 @@ export class World {
 			(this.getTile(x, y + 1) == tile ? TileAdjacent.Down : 0) |
 			(this.getTile(x + 1, y + 1) == tile ? TileAdjacent.DownRight : 0)
 		);
-	}
-
-	private getTileLocation (x: number | IVector, y?: number) {
-		if (typeof x == "object") {
-			y = x.y;
-			x = x.x;
-		}
-
-		if (x > this.size.x || y! > this.size.y) {
-			return Infinity;
-		}
-
-		return y! * this.size.x + x;
 	}
 }

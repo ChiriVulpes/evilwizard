@@ -72,13 +72,19 @@ guage[level="Health"] {
 		}
 	}
 	&.heal {
-		filter: hue-rotate(200deg);
+		filter: hue-rotate(210deg);
 	}
 	&.damage {
 		filter: hue-rotate(130deg);
 	}
 	&.fight {
 		filter: hue-rotate(180deg);
+	}
+	&.good {
+		filter: hue-rotate(250deg);
+	}
+	&.bad {
+		filter: hue-rotate(40deg);
 	}
 	
 	&.slide {
@@ -92,7 +98,10 @@ guage[level="Health"] {
 	position: fixed;
     top: 10px;
     left: 50px;
-    right: 50px;
+	right: 50px;
+	.text {
+		--size: 2;
+	}
 }
 
 @keyframes slide {
@@ -159,4 +168,11 @@ guage[level="Health"] {
 			background: url("../../static/img/readout/abilityeraser.png");
 		}
 	}
+}
+
+body {
+	--creepiness: 0;
+}
+body::before, canvas {
+	filter: saturate(calc(1 - var(--creepiness) * 0.7)) brightness(calc(1 - var(--creepiness) * 0.5));
 }
