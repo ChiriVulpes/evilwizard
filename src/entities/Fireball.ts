@@ -24,11 +24,11 @@ export class Fireball extends Entity {
 	}
 
 	public onBlocked (tileBlocker: Entity | TileType) {
-		this.damage(DamageType.Fire, Infinity);
+		this.onDestroy();
 	}
 
 	public onNoMovementQueued (): undefined {
-		this.damage(DamageType.Fire, Infinity);
+		this.onDestroy();
 		return;
 	}
 

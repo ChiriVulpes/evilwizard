@@ -7,12 +7,12 @@ import { TimeManager } from "util/TimeManager";
 
 export class Frog extends Entity {
 	public type = EntityType.Frog;
-	public magic = 10;
+	public magic = 15;
 	public maxHealth = 2;
 	public resistances = [DamageType.Earth, DamageType.Water, DamageType.Physical];
 	public weaknesses = [DamageType.Fire, DamageType.Physical];
 	public damageType = [DamageType.Earth, DamageType.Water];
-	public damageAmount = 2.5;
+	public damageAmount = 2;
 	public hasBeenAttacked = false;
 	public stepSound = SoundType.FrogStep;
 

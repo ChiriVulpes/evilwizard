@@ -26,13 +26,18 @@ const levelUpScaryMessages = [
 ];
 
 export class Game implements IApi {
-	public entities: Entity[];
 	public world: World;
 	public canvas = new Canvas("game");
 	public readout = new Readout();
 	public player: EvilWizard;
 	public playerLevel: MagicLevel;
 	public sounds = new Sound();
+
+	private _entities: Entity[];
+	private slicedEntities: Entity[];
+	public get entities (): Entity[] {
+		return this.slicedEntities;
+	}
 
 	private isRunning = false;
 	private _paused: boolean;
@@ -63,7 +68,7 @@ export class Game implements IApi {
 	public reset () {
 		this.time.reset();
 		this.isRunning = true;
-		this.entities = [];
+		this._entities = [];
 		this.world = new World();
 		this.addEntity(this.player = new EvilWizard(), Vector(
 			Math.floor(this.world.size.x / 2),
@@ -131,12 +136,16 @@ export class Game implements IApi {
 		entity.api = this;
 		entity.position = position;
 		entity.health = entity.maxHealth;
-		this.entities.push(entity);
+		this._entities.push(entity);
 	}
 
 	public removeEntity (corpse: Entity) {
-		const index = this.entities.indexOf(corpse);
-		this.entities.splice(index, 1);
+		const index = this._entities.findIndex(e =>
+			e.position.x == corpse.position.x && e.position.y == corpse.position.y && e.type == corpse.type,
+		);
+		if (index >= 0) {
+			this._entities.splice(index, 1);
+		}
 	}
 
 	private loop () {
@@ -218,9 +227,10 @@ export class Game implements IApi {
 			}
 		}
 
-		for (const object of this.entities.slice().sort((a, b) =>
+		this.slicedEntities = this._entities.slice().sort((a, b) =>
 			(a.state == EntityState.Dead ? -Infinity : a.position.y) - (b.state == EntityState.Dead ? -Infinity : b.position.y),
-		)) {
+		);
+		for (const object of this.entities) {
 			object.update(this.time);
 		}
 
@@ -297,7 +307,7 @@ export class Game implements IApi {
 				entity.api = this;
 				entity.health = entity.maxHealth;
 
-				this.entities.push(entity);
+				this._entities.push(entity);
 			}
 		}
 	}

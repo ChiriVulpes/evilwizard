@@ -11,7 +11,7 @@ export class Flower extends Entity {
 	public resistances = [DamageType.Earth, DamageType.Light, DamageType.Water];
 	public weaknesses = [DamageType.Fire, DamageType.Dark, DamageType.Physical];
 	public damageType = [DamageType.Physical];
-	public damageAmount = 1.5;
+	public damageAmount = 1;
 	public stepSound = SoundType.FlowerStep;
 
 	public update (time: TimeManager) {
