@@ -1,5 +1,6 @@
 import { TileType } from "core/Tiles";
 import { Canvas, ISubTiles } from "util/Canvas";
+import { Random } from "util/Random";
 import { IVector, Vector } from "util/Vector";
 
 enum TileAdjacent {
@@ -14,6 +15,12 @@ enum TileAdjacent {
 }
 
 const mappedTiles = [TileType.Grass, TileType.Path];
+
+function pair (a: number, b: number) {
+	return a >= b ? a * a + a + b : a + b * b;
+}
+
+const seed = Random.int(300);
 
 export class World {
 	public tiles: TileType[];
@@ -42,6 +49,7 @@ export class World {
 	}
 
 	public render (canvas: Canvas) {
+
 		for (let y = 0; y < this.size.y; y++) {
 			for (let x = 0; x < this.size.x; x++) {
 				if (!canvas.isPositionVisible(x, y)) {
@@ -53,12 +61,18 @@ export class World {
 					continue;
 				}
 
+				Random.pushSeed(pair(seed, pair(x, y)));
+
 				canvas.drawSubTiles(canvas.getImageName(TileType[tile], "tile"),
 					Vector(x, y),
 					this.getSubTiles(this.mappings[this.getTileLocation(x, y)]),
+					true,
 				);
+
+				Random.popSeed();
 			}
 		}
+
 	}
 
 	public getTile (x: number, y: number): TileType;
@@ -101,11 +115,11 @@ export class World {
 				return mapping & TileAdjacent.UpLeft ? 2 : 4;
 
 			} else {
-				return 14;
+				return 8;
 			}
 
 		} else {
-			return mapping & TileAdjacent.Left ? 12 : 0;
+			return mapping & TileAdjacent.Left ? 6 : 0;
 		}
 	}
 
@@ -115,39 +129,39 @@ export class World {
 				return mapping & TileAdjacent.UpRight ? 3 : 5;
 
 			} else {
-				return 15;
+				return 9;
 			}
 
 		} else {
-			return mapping & TileAdjacent.Right ? 13 : 1;
+			return mapping & TileAdjacent.Right ? 7 : 1;
 		}
 	}
 
 	private getDownLeft (mapping: number) {
 		if (mapping & TileAdjacent.Down) {
 			if (mapping & TileAdjacent.Left) {
-				return mapping & TileAdjacent.DownLeft ? 8 : 10;
+				return mapping & TileAdjacent.DownLeft ? 12 : 14;
 
 			} else {
-				return 20;
+				return 18;
 			}
 
 		} else {
-			return mapping & TileAdjacent.Left ? 18 : 6;
+			return mapping & TileAdjacent.Left ? 16 : 10;
 		}
 	}
 
 	private getDownRight (mapping: number) {
 		if (mapping & TileAdjacent.Down) {
 			if (mapping & TileAdjacent.Right) {
-				return mapping & TileAdjacent.DownRight ? 9 : 11;
+				return mapping & TileAdjacent.DownRight ? 13 : 15;
 
 			} else {
-				return 21;
+				return 19;
 			}
 
 		} else {
-			return mapping & TileAdjacent.Right ? 19 : 7;
+			return mapping & TileAdjacent.Right ? 17 : 11;
 		}
 	}
 

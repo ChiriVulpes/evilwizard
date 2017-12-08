@@ -1,3 +1,4 @@
+import { Random } from "util/Random";
 import { IVector, Vector } from "util/Vector";
 
 export interface ISubTiles {
@@ -56,30 +57,30 @@ export class Canvas {
 		this.context.clearRect(0, 0, this.canvasElement.width, this.canvasElement.height);
 	}
 
-	public drawSubTiles (imageName: string, drawPosition: IVector, subtiles: ISubTiles) {
+	public drawSubTiles (imageName: string, drawPosition: IVector, subtiles: ISubTiles, randomize?: boolean) {
 		const image = this.images[imageName];
 		this.drawImageViewport(image,
 			drawPosition.x * 16,
 			drawPosition.y * 16,
-			this.getImagePosition(image, subtiles.upLeft, 8),
+			this.getImagePosition(image, subtiles.upLeft, 8, randomize),
 			Vector(8),
 		);
 		this.drawImageViewport(image,
 			drawPosition.x * 16 + 8,
 			drawPosition.y * 16,
-			this.getImagePosition(image, subtiles.upRight, 8),
+			this.getImagePosition(image, subtiles.upRight, 8, randomize),
 			Vector(8),
 		);
 		this.drawImageViewport(image,
 			drawPosition.x * 16,
 			drawPosition.y * 16 + 8,
-			this.getImagePosition(image, subtiles.downLeft, 8),
+			this.getImagePosition(image, subtiles.downLeft, 8, randomize),
 			Vector(8),
 		);
 		this.drawImageViewport(image,
 			drawPosition.x * 16 + 8,
 			drawPosition.y * 16 + 8,
-			this.getImagePosition(image, subtiles.downRight, 8),
+			this.getImagePosition(image, subtiles.downRight, 8, randomize),
 			Vector(8),
 		);
 	}
@@ -110,10 +111,12 @@ export class Canvas {
 		);
 	}
 
-	private getImagePosition (img: HTMLImageElement, tile: number, size: number): IVector {
+	private getImagePosition (img: HTMLImageElement, tile: number, size: number, randomize = false): IVector {
+		const rand = randomize ? Random.int(img.height / (size * 2), randomize) * size * 2 : 0;
+
 		return {
 			x: (tile % (img.width / size)) * size,
-			y: Math.floor(tile / (img.width / size)) * size,
+			y: Math.floor(tile / (img.width / size)) * size + rand,
 		};
 	}
 
